@@ -1,6 +1,18 @@
 repos:
   - repo: local
     hooks:
+      - id: go-mod-tidy
+        name: go mod tidy
+        entry: go mod tidy
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: go-mod-verify-clean
+        name: go mod files clean
+        entry: bash -c 'git diff --exit-code -- go.mod go.sum'
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: gofmt
         name: gofmt
         entry: gofmt -w
