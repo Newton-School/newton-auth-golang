@@ -1,0 +1,19 @@
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# Go build artifacts
+bin/
+dist/
+coverage.out
+*.coverprofile
+*.test
+
+# Dependency/workspace files
+vendor/
+
+# Environment files
+.env
+.env.*
