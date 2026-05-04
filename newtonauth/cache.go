@@ -93,5 +93,5 @@ func (c *lruCache) removeElement(elem *list.Element) {
 }
 
 func approximateCacheEntrySize(key string, value authCheckResponse) int {
-	return 128 + len(key) + len(value.UID) + 64
+	return 128 + len(key) + len(value.UID) + len(value.FirstName) + len(value.LastName) + len(value.Email) + 64
 }

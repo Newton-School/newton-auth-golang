@@ -309,7 +309,7 @@ func mustCookie(t *testing.T, resp *http.Response, name string) *http.Cookie {
 
 func buildValidSessionCookie(t *testing.T, auth *Auth, uid string, platformToken string, authorized bool, sessionTTLSeconds int) *http.Cookie {
 	t.Helper()
-	value, err := buildSessionCookieValue(uid, platformToken, authorized, sessionTTLSeconds, auth.config.SessionSigningSecret)
+	value, err := buildSessionCookieValue(uid, platformToken, authorized, sessionTTLSeconds, auth.config.SessionSigningSecret, auth.config.ClientID)
 	if err != nil {
 		t.Fatal(err)
 	}
