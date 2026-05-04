@@ -46,7 +46,7 @@ func (a *Auth) Authenticate(r *http.Request) (*AuthResult, error) {
 		return nil, err
 	}
 
-	session, err := parseSessionCookieValue(cookie.Value, a.config.SessionSigningSecret)
+	session, err := parseSessionCookieValue(cookie.Value, a.config.SessionSigningSecret, a.config.ClientID)
 	if err != nil {
 		return &AuthResult{
 			Authenticated:      false,
@@ -118,6 +118,7 @@ func (a *Auth) HandleCallback(r *http.Request) (*CallbackResult, string, error) 
 		assertion.Authorized,
 		assertion.SessionTTLSeconds,
 		a.config.SessionSigningSecret,
+		a.config.ClientID,
 	)
 	if err != nil {
 		return nil, "", err
@@ -127,6 +128,9 @@ func (a *Auth) HandleCallback(r *http.Request) (*CallbackResult, string, error) 
 		Authenticated:         assertion.Authenticated,
 		Authorized:            assertion.Authorized,
 		UID:                   assertion.Sub,
+		FirstName:             assertion.FirstName,
+		LastName:              assertion.LastName,
+		Email:                 assertion.Email,
 		ClientCacheTTLSeconds: assertion.ClientCacheTTLSeconds,
 		SessionTTLSeconds:     assertion.SessionTTLSeconds,
 		ShouldClearSession:    false,
@@ -137,6 +141,9 @@ func (a *Auth) HandleCallback(r *http.Request) (*CallbackResult, string, error) 
 		User: &User{
 			UID:        assertion.Sub,
 			Authorized: assertion.Authorized,
+			FirstName:  assertion.FirstName,
+			LastName:   assertion.LastName,
+			Email:      assertion.Email,
 		},
 		ClientCacheTTLSeconds: assertion.ClientCacheTTLSeconds,
 		SessionTTLSeconds:     assertion.SessionTTLSeconds,
@@ -167,6 +174,9 @@ func authCheckToResult(data authCheckResponse, session *sessionPayload) *AuthRes
 		result.User = &User{
 			UID:        session.UID,
 			Authorized: data.Authorized,
+			FirstName:  data.FirstName,
+			LastName:   data.LastName,
+			Email:      data.Email,
 		}
 	}
 	return result

@@ -3,6 +3,9 @@ package newtonauth
 type User struct {
 	UID        string
 	Authorized bool
+	FirstName  string
+	LastName   string
+	Email      string
 }
 
 type AuthResult struct {
@@ -29,6 +32,9 @@ type authCheckResponse struct {
 	Authenticated         bool   `json:"authenticated"`
 	Authorized            bool   `json:"authorized"`
 	UID                   string `json:"uid"`
+	FirstName             string `json:"first_name"`
+	LastName              string `json:"last_name"`
+	Email                 string `json:"email"`
 	ClientCacheTTLSeconds int    `json:"client_cache_ttl_seconds"`
 	SessionTTLSeconds     int    `json:"session_ttl_seconds"`
 	ShouldClearSession    bool   `json:"should_clear_session"`
@@ -43,6 +49,9 @@ type callbackAssertion struct {
 	ClientCacheTTLSeconds int    `json:"client_cache_ttl_seconds"`
 	SessionTTLSeconds     int    `json:"session_ttl_seconds"`
 	PlatformToken         string `json:"platform_token"`
+	FirstName             string `json:"first_name"`
+	LastName              string `json:"last_name"`
+	Email                 string `json:"email"`
 	Iat                   int64  `json:"iat"`
 	Exp                   int64  `json:"exp"`
 	Nonce                 string `json:"nonce"`

@@ -12,8 +12,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
+
+const sessionWireVersion = "v2"
+
+var aesgcmCache sync.Map
 
 func b64URLEncode(value []byte) string {
 	return base64.RawURLEncoding.EncodeToString(value)
@@ -29,6 +34,23 @@ func randomBytes(size int) ([]byte, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+func aesgcmFor(secret string) (cipher.AEAD, error) {
+	if cached, ok := aesgcmCache.Load(secret); ok {
+		return cached.(cipher.AEAD), nil
+	}
+	key := sha256.Sum256([]byte(secret))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	aesgcmCache.Store(secret, gcm)
+	return gcm, nil
 }
 
 func signValue(payload any, secret string) (string, error) {
@@ -93,12 +115,7 @@ func decryptCallbackAssertion(identity string, callbackSecret string, clientID s
 		return nil, fmt.Errorf("%w: assertion audience mismatch", ErrInvalidCallbackAssertion)
 	}
 
-	key := sha256.Sum256([]byte(callbackSecret))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(block)
+	gcm, err := aesgcmFor(callbackSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +159,53 @@ func buildSessionPayload(uid string, platformToken string, authorized bool, sess
 		IssuedAt:          time.Now().Unix(),
 		Nonce:             b64URLEncode(nonce),
 	}, nil
+}
+
+func encryptValue(payload any, secret string, aad []byte) (string, error) {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := aesgcmFor(secret)
+	if err != nil {
+		return "", err
+	}
+	nonce, err := randomBytes(gcm.NonceSize())
+	if err != nil {
+		return "", err
+	}
+	ciphertext := gcm.Seal(nil, nonce, payloadBytes, aad)
+	return sessionWireVersion + "." + b64URLEncode(nonce) + "." + b64URLEncode(ciphertext), nil
+}
+
+func decryptValue(value string, secret string, aad []byte, out any) error {
+	if value == "" {
+		return ErrInvalidSession
+	}
+	parts := strings.Split(value, ".")
+	if len(parts) != 3 || parts[0] != sessionWireVersion {
+		return ErrInvalidSession
+	}
+	nonce, err := b64URLDecode(parts[1])
+	if err != nil {
+		return ErrInvalidSession
+	}
+	ciphertext, err := b64URLDecode(parts[2])
+	if err != nil {
+		return ErrInvalidSession
+	}
+	gcm, err := aesgcmFor(secret)
+	if err != nil {
+		return err
+	}
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, aad)
+	if err != nil {
+		return ErrInvalidSession
+	}
+	if err := json.Unmarshal(plaintext, out); err != nil {
+		return ErrInvalidSession
+	}
+	return nil
 }
 
 func deriveIssuerFromBaseURL(baseURL string) (string, error) {

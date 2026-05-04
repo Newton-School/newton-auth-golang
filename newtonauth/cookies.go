@@ -21,17 +21,17 @@ func parseStateCookieValue(cookieValue string, secret string) (*statePayload, er
 	return &payload, nil
 }
 
-func buildSessionCookieValue(uid string, platformToken string, authorized bool, sessionTTLSeconds int, secret string) (string, error) {
+func buildSessionCookieValue(uid string, platformToken string, authorized bool, sessionTTLSeconds int, secret string, clientID string) (string, error) {
 	payload, err := buildSessionPayload(uid, platformToken, authorized, sessionTTLSeconds)
 	if err != nil {
 		return "", err
 	}
-	return signValue(payload, secret)
+	return encryptValue(payload, secret, []byte(clientID))
 }
 
-func parseSessionCookieValue(cookieValue string, secret string) (*sessionPayload, error) {
+func parseSessionCookieValue(cookieValue string, secret string, clientID string) (*sessionPayload, error) {
 	var payload sessionPayload
-	if err := verifySignedValue(cookieValue, secret, &payload); err != nil {
+	if err := decryptValue(cookieValue, secret, []byte(clientID), &payload); err != nil {
 		return nil, err
 	}
 	if payload.SessionTTLSeconds <= 0 || time.Now().Unix() > payload.IssuedAt+int64(payload.SessionTTLSeconds) {

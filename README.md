@@ -13,13 +13,13 @@ Protected application routes stay explicit. They return `401` or `403`; they do 
 Install from a Git tag so consumers get an immutable version instead of a moving branch head.
 
 ```bash
-go get github.com/Newton-School/newton-auth-golang@v0.1.0
+go get github.com/Newton-School/newton-auth-golang@v0.2.0
 ```
 
 In `go.mod`:
 
 ```go
-require github.com/Newton-School/newton-auth-golang v0.1.0
+require github.com/Newton-School/newton-auth-golang v0.2.0
 ```
 
 For private repository usage, configure `GOPRIVATE` appropriately before running `go get`.
