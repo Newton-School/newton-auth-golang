@@ -36,10 +36,7 @@ go test ./...
 - Go `>=1.22`
 - Standard `net/http` / `http.ServeMux`
 
-The SDK mirrors the Python SDK and the current `platform_auth` backend contract:
-- callback assertion format `v1.<nonce>.<ciphertext>.<aad>`
-- AES-GCM callback assertion decryption using `sha256(callback_secret)`
-- signed state and session cookies using HMAC-SHA256 over base64url JSON payloads
+The SDK mirrors the Python SDK and the current `platform_auth` backend contract.
 
 ## Usage
 
@@ -78,6 +75,9 @@ func main() {
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"uid":        user.UID,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+			"email":      user.Email,
 			"authorized": user.Authorized,
 		})
 	})))
@@ -99,7 +99,17 @@ To start login, the frontend should navigate the browser to:
 /newton/login?next=/protected
 ```
 
-After successful callback, the SDK sets a signed `newton_session` cookie and redirects to the original `next` path.
+After successful callback, the SDK sets a `newton_session` cookie and redirects to the original `next` path.
+
+## User fields
+
+`UserFromContext(r.Context())` returns a `*User` with:
+
+- `UID` — opaque user identifier
+- `Authorized` — whether the user is authorized for this app
+- `FirstName`, `LastName`, `Email` — strings (empty `""` if unset on the Newton profile, never the zero pointer or `nil`)
+
+Profile fields refresh every `ClientCacheTTLSeconds` (default 60s) via the auth-check call to newton-api. Treat them as eventually-consistent, not live: an email change on the Newton side propagates within one cache TTL window, not immediately.
 
 ## Authorization
 
