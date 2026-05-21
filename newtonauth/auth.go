@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Auth struct {
@@ -247,7 +248,8 @@ func deleteCookie(w http.ResponseWriter, name string) {
 		Name:     name,
 		Value:    "",
 		Path:     "/",
-		MaxAge:   0,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,

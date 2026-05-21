@@ -113,9 +113,7 @@ func TestCallbackCreatesSessionCookieAndRedirects(t *testing.T) {
 		t.Fatal("expected session cookie")
 	}
 	clearedStateCookie := mustCookie(t, callbackResp, auth.config.StateCookieName)
-	if clearedStateCookie.MaxAge != 0 {
-		t.Fatalf("expected cleared state cookie, got MaxAge=%d", clearedStateCookie.MaxAge)
-	}
+	assertCookieDeleted(t, clearedStateCookie)
 }
 
 func TestCallbackRejectsStateMismatch(t *testing.T) {
@@ -151,9 +149,7 @@ func TestCallbackRejectsStateMismatch(t *testing.T) {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
 	clearedSession := mustCookie(t, resp, auth.config.SessionCookieName)
-	if clearedSession.MaxAge != 0 {
-		t.Fatalf("expected cleared session cookie, got MaxAge=%d", clearedSession.MaxAge)
-	}
+	assertCookieDeleted(t, clearedSession)
 }
 
 func TestProtectedRouteAllowsValidAuthenticatedSession(t *testing.T) {
@@ -212,9 +208,7 @@ func TestProtectedRouteRejectsCorruptSessionAndClearsCookie(t *testing.T) {
 		t.Fatalf("expected 401, got %d", resp.StatusCode)
 	}
 	cleared := mustCookie(t, resp, auth.config.SessionCookieName)
-	if cleared.MaxAge != 0 {
-		t.Fatalf("expected cleared session cookie, got MaxAge=%d", cleared.MaxAge)
-	}
+	assertCookieDeleted(t, cleared)
 }
 
 func TestProtectedRouteServerRevokesSessionAndClearsCookie(t *testing.T) {
@@ -238,9 +232,7 @@ func TestProtectedRouteServerRevokesSessionAndClearsCookie(t *testing.T) {
 		t.Fatalf("expected 401, got %d", resp.StatusCode)
 	}
 	cleared := mustCookie(t, resp, auth.config.SessionCookieName)
-	if cleared.MaxAge != 0 {
-		t.Fatalf("expected cleared session cookie, got MaxAge=%d", cleared.MaxAge)
-	}
+	assertCookieDeleted(t, cleared)
 }
 
 func TestProtectedRouteRejectsUnauthorizedUser(t *testing.T) {
@@ -305,6 +297,19 @@ func mustCookie(t *testing.T, resp *http.Response, name string) *http.Cookie {
 	}
 	t.Fatalf("cookie %s not found", name)
 	return nil
+}
+
+func assertCookieDeleted(t *testing.T, c *http.Cookie) {
+	t.Helper()
+	if c.Value != "" {
+		t.Fatalf("expected cleared cookie value, got %q", c.Value)
+	}
+	if c.MaxAge >= 0 {
+		t.Fatalf("expected MaxAge<0 to delete cookie, got MaxAge=%d", c.MaxAge)
+	}
+	if c.Expires.IsZero() || c.Expires.After(time.Unix(0, 0)) {
+		t.Fatalf("expected Expires at-or-before epoch for older clients, got %s", c.Expires)
+	}
 }
 
 func buildValidSessionCookie(t *testing.T, auth *Auth, uid string, platformToken string, authorized bool, sessionTTLSeconds int) *http.Cookie {
