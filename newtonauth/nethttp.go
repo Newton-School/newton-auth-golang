@@ -9,6 +9,11 @@ import (
 type HandlerOptions struct {
 	UnauthenticatedHandler func(http.ResponseWriter, *http.Request, *AuthResult)
 	UnauthorizedHandler    func(http.ResponseWriter, *http.Request, *AuthResult)
+	// AuthenticatedOnly gates access on authentication alone. When true, an
+	// authenticated but unauthorized user is allowed through instead of being
+	// rejected with 403 — for apps that manage their own authorization and use
+	// this SDK purely to identify the user.
+	AuthenticatedOnly bool
 }
 
 func (a *Auth) LoginHandler() http.Handler {
@@ -75,7 +80,7 @@ func (a *Auth) RequireAuthWithOptions(next http.Handler, opts HandlerOptions) ht
 			handler(w, r, result)
 			return
 		}
-		if !result.Authorized {
+		if !result.Authorized && !opts.AuthenticatedOnly {
 			if result.ShouldClearSession {
 				a.ClearSession(w)
 			}

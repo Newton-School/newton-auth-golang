@@ -111,6 +111,19 @@ After successful callback, the SDK sets a `newton_session` cookie and redirects 
 
 Profile fields refresh every `ClientCacheTTLSeconds` (default 60s) via the auth-check call to newton-api. Treat them as eventually-consistent, not live: an email change on the Newton side propagates within one cache TTL window, not immediately.
 
+## Authentication-only mode
+
+`RequireAuth` rejects an authenticated-but-unauthorized user with `403`. If your app manages its own authorization and only needs Newton to identify the user, pass `AuthenticatedOnly: true` so unauthorized users are let through (unauthenticated users are still rejected with `401`):
+
+```go
+mux.Handle("/protected", auth.RequireAuthWithOptions(
+	http.HandlerFunc(protected),
+	newtonauth.HandlerOptions{AuthenticatedOnly: true},
+))
+```
+
+This pairs with binding the Newton OAuth application without a `required_permission`, in which case `Authorized` is already `true` for every authenticated user.
+
 ## Authorization
 
 The SDK handles authentication and Newton platform access verification. Application-level authorization remains application-owned.
