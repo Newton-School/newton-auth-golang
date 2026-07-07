@@ -256,6 +256,52 @@ func TestProtectedRouteRejectsUnauthorizedUser(t *testing.T) {
 	}
 }
 
+func TestProtectedRouteAllowsUnauthorizedUserWhenAuthenticatedOnly(t *testing.T) {
+	auth := newTestAuth(t, newStubAPI(http.StatusOK, authCheckResponse{
+		Authenticated:         true,
+		Authorized:            false,
+		UID:                   "user-123",
+		ClientCacheTTLSeconds: 60,
+		SessionTTLSeconds:     86400,
+		ShouldClearSession:    false,
+	}))
+	sessionCookie := buildValidSessionCookie(t, auth, "user-123", "platform-token", false, 86400)
+	req := httptest.NewRequest(http.MethodGet, "https://app.example.com/protected", nil)
+	req.AddCookie(sessionCookie)
+	rr := httptest.NewRecorder()
+
+	called := false
+	handler := auth.RequireAuthWithOptions(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		user, ok := UserFromContext(r.Context())
+		if !ok || user.UID != "user-123" {
+			t.Fatal("expected authenticated user in context")
+		}
+	}), HandlerOptions{AuthenticatedOnly: true})
+	handler.ServeHTTP(rr, req)
+
+	if rr.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Result().StatusCode)
+	}
+	if !called {
+		t.Fatal("expected wrapped handler to run for authenticated-but-unauthorized user")
+	}
+}
+
+func TestAuthenticatedOnlyStillRejectsUnauthenticatedUser(t *testing.T) {
+	auth := newTestAuth(t, newStubAPI(http.StatusOK, authCheckResponse{}))
+	req := httptest.NewRequest(http.MethodGet, "https://app.example.com/protected", nil)
+	rr := httptest.NewRecorder()
+
+	auth.RequireAuthWithOptions(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler must not run without a session")
+	}), HandlerOptions{AuthenticatedOnly: true}).ServeHTTP(rr, req)
+
+	if rr.Result().StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rr.Result().StatusCode)
+	}
+}
+
 func newTestAuth(t *testing.T, client *http.Client) *Auth {
 	t.Helper()
 	auth, err := New(Config{
