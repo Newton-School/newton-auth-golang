@@ -113,6 +113,18 @@ func (a *Auth) HandleCallback(r *http.Request) (*CallbackResult, string, error) 
 		return nil, "", err
 	}
 
+	if !assertion.Authenticated {
+		// Login completed but there is no authenticated user (e.g. no Newton
+		// account). Establish no session; return an unauthenticated result.
+		return &CallbackResult{
+			Authenticated:         false,
+			RedirectURI:           stateData.RedirectURI,
+			User:                  nil,
+			ClientCacheTTLSeconds: assertion.ClientCacheTTLSeconds,
+			SessionTTLSeconds:     assertion.SessionTTLSeconds,
+		}, "", nil
+	}
+
 	sessionCookieValue, err := buildSessionCookieValue(
 		assertion.Sub,
 		assertion.PlatformToken,
@@ -138,7 +150,8 @@ func (a *Auth) HandleCallback(r *http.Request) (*CallbackResult, string, error) 
 	})
 
 	return &CallbackResult{
-		RedirectURI: stateData.RedirectURI,
+		Authenticated: true,
+		RedirectURI:   stateData.RedirectURI,
 		User: &User{
 			UID:        assertion.Sub,
 			Authorized: assertion.Authorized,

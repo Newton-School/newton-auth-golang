@@ -111,6 +111,10 @@ After successful callback, the SDK sets a `newton_session` cookie and redirects 
 
 Profile fields refresh every `ClientCacheTTLSeconds` (default 60s) via the auth-check call to newton-api. Treat them as eventually-consistent, not live: an email change on the Newton side propagates within one cache TTL window, not immediately.
 
+## Unauthenticated callbacks (no Newton account)
+
+If a user completes Google login but has no Newton account, newton-api returns a signed `authenticated=false` assertion. `HandleCallback` reports `CallbackResult.Authenticated == false` with a nil `User` and no session cookie; `CallbackHandler` responds `401 account_not_found` (clearing cookies) instead of the generic `invalid auth callback` 400.
+
 ## Authentication-only mode
 
 `RequireAuth` rejects an authenticated-but-unauthorized user with `403`. If your app manages its own authorization and only needs Newton to identify the user, pass `AuthenticatedOnly: true` so unauthorized users are let through (unauthenticated users are still rejected with `401`):

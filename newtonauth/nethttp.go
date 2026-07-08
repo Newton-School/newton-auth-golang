@@ -45,6 +45,11 @@ func (a *Auth) CallbackHandler() http.Handler {
 			http.Error(w, "invalid auth callback", http.StatusBadRequest)
 			return
 		}
+		if !result.Authenticated {
+			a.ClearSession(w)
+			http.Error(w, "account_not_found", http.StatusUnauthorized)
+			return
+		}
 		setCookie(w, a.config.SessionCookieName, sessionCookieValue, result.SessionTTLSeconds)
 		deleteCookie(w, a.config.StateCookieName)
 		http.Redirect(w, r, result.RedirectURI, http.StatusFound)

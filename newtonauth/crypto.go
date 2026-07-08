@@ -139,7 +139,7 @@ func decryptCallbackAssertion(identity string, callbackSecret string, clientID s
 		return nil, fmt.Errorf("%w: assertion expired", ErrInvalidCallbackAssertion)
 	case assertion.Iat > nowTS+30:
 		return nil, fmt.Errorf("%w: assertion issued in future", ErrInvalidCallbackAssertion)
-	case assertion.Sub == "" || assertion.PlatformToken == "":
+	case assertion.Authenticated && (assertion.Sub == "" || assertion.PlatformToken == ""):
 		return nil, fmt.Errorf("%w: assertion missing required fields", ErrInvalidCallbackAssertion)
 	default:
 		return &assertion, nil

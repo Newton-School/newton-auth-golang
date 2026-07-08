@@ -18,6 +18,9 @@ type AuthResult struct {
 }
 
 type CallbackResult struct {
+	// Authenticated is false when the login completed but there is no
+	// authenticated user (e.g. no Newton account); User is nil in that case.
+	Authenticated         bool
 	RedirectURI           string
 	User                  *User
 	ClientCacheTTLSeconds int
