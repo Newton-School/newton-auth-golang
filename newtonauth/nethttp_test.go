@@ -116,6 +116,46 @@ func TestCallbackCreatesSessionCookieAndRedirects(t *testing.T) {
 	assertCookieDeleted(t, clearedStateCookie)
 }
 
+func TestCallbackUnauthenticatedAssertionReturns401NoSession(t *testing.T) {
+	auth := newTestAuth(t, newStubAPI(http.StatusOK, authCheckResponse{}))
+	loginReq := httptest.NewRequest(http.MethodGet, "https://app.example.com/newton/login?next=/dashboard", nil)
+	loginRR := httptest.NewRecorder()
+	auth.LoginHandler().ServeHTTP(loginRR, loginReq)
+
+	loginResp := loginRR.Result()
+	stateCookie := mustCookie(t, loginResp, auth.config.StateCookieName)
+	loginLocation, err := url.Parse(loginResp.Header.Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := loginLocation.Query().Get("state")
+	// authenticated=false assertion carries no uid / platform token (no account)
+	identity := buildTestCallbackAssertion(t, testCallbackSecret, testClientID, "https://api.example.com", callbackAssertion{
+		Aud:                   testClientID,
+		Iss:                   "https://api.example.com",
+		Authenticated:         false,
+		Authorized:            false,
+		ClientCacheTTLSeconds: 60,
+		SessionTTLSeconds:     86400,
+		Iat:                   time.Now().Unix(),
+		Exp:                   time.Now().Add(time.Minute).Unix(),
+		Nonce:                 "nonce",
+	})
+
+	callbackReq := httptest.NewRequest(http.MethodGet, "https://app.example.com/newton/callback?state="+url.QueryEscape(state)+"&identity="+url.QueryEscape(identity), nil)
+	callbackReq.AddCookie(stateCookie)
+	callbackRR := httptest.NewRecorder()
+
+	auth.CallbackHandler().ServeHTTP(callbackRR, callbackReq)
+
+	callbackResp := callbackRR.Result()
+	if callbackResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", callbackResp.StatusCode)
+	}
+	cleared := mustCookie(t, callbackResp, auth.config.SessionCookieName)
+	assertCookieDeleted(t, cleared)
+}
+
 func TestCallbackRejectsStateMismatch(t *testing.T) {
 	auth := newTestAuth(t, newStubAPI(http.StatusOK, authCheckResponse{}))
 	loginReq := httptest.NewRequest(http.MethodGet, "https://app.example.com/newton/login?next=/", nil)
