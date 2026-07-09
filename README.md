@@ -57,7 +57,7 @@ func main() {
 		ClientID:       os.Getenv("NEWTON_AUTH_CLIENT_ID"),
 		ClientSecret:   os.Getenv("NEWTON_AUTH_CLIENT_SECRET"),
 		CallbackSecret: os.Getenv("NEWTON_AUTH_CALLBACK_SECRET"),
-		NewtonAPIBase:  getenv("NEWTON_AUTH_BASE_URL", "https://auth.newtonschool.co/api/v1"),
+		NewtonAPIBase:  getenv("NEWTON_AUTH_BASE_URL", "https://my.newtonschool.co/api/v1"),
 		CallbackPath:   "/newton/callback",
 	})
 	if err != nil {
